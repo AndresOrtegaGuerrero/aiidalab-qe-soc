@@ -1,13 +1,23 @@
 """Panel for SOC plugin.
 """
 import ipywidgets as ipw
+import traitlets as tl
+from aiida.orm import StructureData
 from aiidalab_qe.common.panel import Panel
+from aiida_quantumespresso.workflows.pdos import PdosWorkChain
+from aiida import orm
+from aiida_quantumespresso.calculations.functions.create_kpoints_from_distance import (
+    create_kpoints_from_distance,
+)
 
 class Setting(Panel):
     
-
     title = "SOC Settings"
     identifier = "soc"
+
+    protocol = tl.Unicode(allow_none=True)
+    input_structure = tl.Instance(orm.StructureData, allow_none=True)
+
     def __init__(self, **kwargs):
         self.settings_title = ipw.HTML(
             """<div style="padding-top: 0px; padding-bottom: 0px">
@@ -34,22 +44,25 @@ class Setting(Panel):
             value="hexagonal",
         )
 
-        self.peudos_help = ipw.HTML(
+        self.lattice_help = ipw.HTML(
             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
-            Spin Orbit Coupling calculations are conducted using the PseudoDojo library.
+            If your system has periodicity xy. Please select one of the five 2D Bravais lattices corresponding to your system
             </div>"""
         )
         self.settings_help = ipw.HTML(
             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
             Select if you want a Band structure , Projected density of states or both to be computed.
+            Spin Orbit Coupling calculations are conducted using the Full relativistic pseudo potentials from the PseudoDojo library.
             </div>"""
         )
-        # the widget for DFT functional selection
-        self.dft_functional = ipw.Dropdown(
-            description="Functional:",
-            options=["PBE", "PBEsol"],
-            style={"description_width": "initial"},
+
+        self.cutoffs_help = ipw.HTML(
+            """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
+            Please set the cutoffs for the calculation. The default values are recommended for most systems.
+            </div>"""
         )
+
+        self.mesh_grid = ipw.HTML()
 
         self.soc_ecutwfc = ipw.BoundedFloatText(
             value=90.0,
@@ -78,24 +91,45 @@ class Setting(Panel):
             style={"description_width": "initial"},
         )
 
+        self.nscf_kpoints_distance.observe(self._display_mesh, "value")
+
         self.children=[
                 self.settings_title,
                 self.settings_help,
                 self.calc_options,
-                self.dft_functional,
+                self.lattice_help,
                 self.kpath_2d,
-                self.peudos_help,
-                self.soc_ecutwfc,
-                self.soc_ecutrho,
-                self.nscf_kpoints_distance,
+                self.cutoffs_help,
+                ipw.HBox([self.soc_ecutwfc, self.soc_ecutrho,]),
+                ipw.HBox([self.nscf_kpoints_distance, self.mesh_grid,]),
             ]
         super().__init__(**kwargs)
 
+    @tl.observe("protocol")
+    def _protocol_changed(self, change):
+        """Input protocol changed, update the widget values."""
+        self.nscf_kpoints_distance.value = PdosWorkChain.get_protocol_inputs(self.protocol)["nscf"]["kpoints_distance"]
+        self._display_mesh()
+
+    @tl.observe("input_structure")
+    def _update_structure(self, _=None):
+        self._display_mesh()
+
+    def _display_mesh(self, _=None):
+        if self.input_structure is None:
+            return
+        mesh = create_kpoints_from_distance.process_class._func(
+            self.input_structure,
+            orm.Float(self.nscf_kpoints_distance.value),
+            orm.Bool(True),
+        )
+        self.mesh_grid.value = "Mesh " + str(mesh.get_kpoints_mesh()[0])
+
+    
     def get_panel_value(self):
         """Return a dictionary with the input parameters for the plugin."""
         return {
             "calc_options": self.calc_options.value,
-            "dft_functional": self.dft_functional.value,
             "soc_ecutwfc": self.soc_ecutwfc.value,
             "soc_ecutrho": self.soc_ecutrho.value,
             "kpath_2d": self.kpath_2d.value,
@@ -106,7 +140,6 @@ class Setting(Panel):
         """Load a dictionary with the input parameters for the plugin."""
         self.kpath_2d.value = input_dict.get("kpath_2d", "hexagonal")
         self.calc_options.value = input_dict.get("calc_options", "bands")
-        self.dft_functional.value = input_dict.get("dft_functional", "PBE")
         self.soc_ecutwfc.value = input_dict.get("soc_ecutwfc", 90.0)
         self.soc_ecutrho.value = input_dict.get("soc_ecutrho", 360.0)
         self.nscf_kpoints_distance.value = input_dict.get("nscf_kpoints_distance", 0.1)
@@ -115,7 +148,6 @@ class Setting(Panel):
         """Reset the panel to its default values."""
         self.kpath_2d.value = "hexagonal"
         self.calc_options.value = "bands"
-        self.dft_functional.value = "PBE"
         self.soc_ecutwfc.value = 90.0
         self.soc_ecutrho.value = 360.0
         self.nscf_kpoints_distance.value = 0.1

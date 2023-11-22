@@ -13,9 +13,12 @@ def get_builder(codes,structure, parameters):
 
     from copy import deepcopy
     protocol = parameters["workchain"].pop("protocol", "moderate")
+    pseudos = parameters["advanced"].get("pseudo_family")
+    pseudo_info = pseudos.split("/")
+    functional = pseudo_info[2]
     pw_code = codes.pop("pw")
-    dos_code = codes.pop("dos")
-    projwfc_code = codes.pop("projwfc")
+    dos_code = codes.pop("soc_dos")
+    projwfc_code = codes.pop("soc_projwfc")
 
     #scf overrides
     scf_overrides = deepcopy(parameters["advanced"])
@@ -62,6 +65,7 @@ def get_builder(codes,structure, parameters):
         electronic_type=ElectronicType(parameters["workchain"]["electronic_type"]),
         spin_type=SpinType(parameters["workchain"]["spin_type"]),
         initial_magnetic_moments=parameters["advanced"]["initial_magnetic_moments"],
+        functional = functional, 
         clean_workdir=False,
         )
 

@@ -199,7 +199,7 @@ class SOCWorkChain(WorkChain):
         inputs.structure = self.ctx.current_structure
         inputs.nscf.pw.parameters = inputs.nscf.pw.parameters.get_dict()
 
-        if self.ctx.scf_parent_folder:
+        if hasattr(self.ctx, 'scf_parent_folder') and self.ctx.scf_parent_folder:
             inputs.pop("scf")
             inputs.nscf.pw.parent_folder = self.ctx.scf_parent_folder
         
