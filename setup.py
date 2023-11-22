@@ -1,6 +1,5 @@
 import pathlib
 from setuptools import setup, find_packages
-from subprocess import run
 from setuptools.command.install import install
 
 # The directory containing this file
@@ -8,37 +7,6 @@ HERE = pathlib.Path(__file__).parent
 
 # The text of the README file
 README = (HERE / "README.md").read_text()
-
-class PseudosInstallCommand(install):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.functional = ['PBE', 'PBEsol']
-        self.protocol = ['standard', 'stringent']
-
-    def run(self):
-        super().run()
-        for functional in self.functional:
-            for protocol in self.protocol:
-                run(
-                    [
-                        "aiida-pseudo",
-                        "install",
-                        "pseudo-dojo",
-                        "--relativistic",
-                        "FR",
-                        "--pseudo-format",
-                        "upf",
-                        "--version",
-                        "0.4",
-                        "--protocol",
-                        protocol,
-                        "--functional",
-                        functional,
-
-                    ],
-                    check=True,
-                    capture_output=True,
-                )
 
 setup(
     name="aiidalab-qe-soc",
@@ -58,14 +26,13 @@ setup(
         "aiida.workflows": [
             "soc_app.soc = aiidalab_qe_soc.socworkchain:SOCWorkChain",
         ],
-
     },
     install_requires=[
-
     ],
-    cmdclass={
-        "install": PseudosInstallCommand,
-    },
     package_data={},
     python_requires=">=3.6",
 )
+
+# Run post_install.py after installation
+import subprocess
+subprocess.run(['python', 'pseudos_install.py'])
