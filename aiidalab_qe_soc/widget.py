@@ -154,7 +154,7 @@ class BandDosPlotsWidget(ipw.VBox):
         return dos
 
     def _get_fermi_energy(self):
-        fermi_energy = self.dos_data["fermi_energy"] if self.dos_data else self.bands_data["fermi_energy"]
+        fermi_energy = self.dos_data["fermi_energy"] if self.dos_data else self.bands.band_parameters["fermi_energy"]
         return fermi_energy
 
     def _get_bands_data(self):
@@ -352,7 +352,9 @@ class BandDosPlotsWidget(ipw.VBox):
                         showlegend=False,
                     )
                 )
-        self._customize_layout(fig, self.bands_xaxis, self.bands_yaxis)
+        for i in self.band_labels[1]:
+            fig.add_vline(x=i, line=dict(color="#111111", width=1))
+        fig.update_layout(xaxis=self.bands_xaxis, yaxis=self.bands_yaxis, plot_bgcolor="white", height=600, width=850,)
         return go.FigureWidget(fig)
 
     def _create_dos_only_plot(self):
@@ -373,7 +375,8 @@ class BandDosPlotsWidget(ipw.VBox):
                     ),
                 )
             )
-        self._customize_layout(fig, self.dos_xaxis, self.dos_yaxis)
+        fig.add_vline(x=0, line=dict(color="#111111", width=1, dash="dot"))
+        fig.update_layout(xaxis=self.dos_xaxis, yaxis=self.dos_yaxis, plot_bgcolor="white", height=600, width=850,)
         return go.FigureWidget(fig)
 
     def _create_combined_plot(self):
@@ -386,6 +389,13 @@ class BandDosPlotsWidget(ipw.VBox):
         paths = self.bands_data[0].get("paths")
         self._add_band_traces(fig, paths)
         self._add_dos_traces(fig)
+        for i in self.band_labels[1]:
+                fig.add_vline(
+                    x=i,
+                    line=dict(color="#111111", width=1),
+                    row=1,
+                    col=1,
+                )
         self._customize_combined_layout(fig)
         return go.FigureWidget(fig)
 
@@ -690,7 +700,7 @@ def export_bands_data(outputs, fermi_energy=None):
     )
     # The fermi energy from band calculation is not robust.
     data["fermi_level"] = (
-        fermi_energy or outputs.band_parameters["fermi_energy"]
+        outputs.band_parameters["fermi_energy"] or fermi_energy 
     )
     return [
         jsanitize(data),
