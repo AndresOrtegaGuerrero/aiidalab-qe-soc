@@ -653,13 +653,13 @@ def _get_key(group_tag, plot_tag, atom_position, kind_name, orbital_name_plotly)
     key_formats = {
         ("atoms", "total"): r"{var}",
         ("kinds", "total"): r"{var1}",
-        ("atoms", "orbital"): r"{var1}<br>{var2}-{var3}",
-        ("kinds", "orbital"): r"{var1}-{var3}",
+        ("atoms", "orbital"): r"{var1}-{var}<br>{var3}",
+        ("kinds", "orbital"): r"{var1}<br>{var3}",
     }
 
     key = key_formats.get((group_tag, plot_tag))
     if key is not None:
-        return key.format(var=atom_position, var1=kind_name, var2=kind_name, var3=orbital_name_plotly)
+        return key.format(var=atom_position, var1=kind_name, var3=orbital_name_plotly)
     else:
         return None
 
