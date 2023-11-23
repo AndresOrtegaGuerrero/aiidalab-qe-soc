@@ -340,18 +340,8 @@ class BandDosPlotsWidget(ipw.VBox):
         fig = go.Figure()
         paths = self.bands_data[0].get("paths")
 
-        for band in paths:
-            for bands in band["values"]:
-                bands_np = np.array(bands)
-                fig.add_trace(
-                    go.Scatter(
-                        x=band["x"],
-                        y=bands_np - self.fermi_energy,
-                        mode="lines",
-                        line=dict(color="#111111", shape="spline", smoothing=1.3),
-                        showlegend=False,
-                    )
-                )
+        self._add_band_traces(fig, paths, "bands_only")
+
         for i in self.band_labels[1]:
             fig.add_vline(x=i, line=dict(color="#111111", width=1))
         fig.update_layout(xaxis=self.bands_xaxis, yaxis=self.bands_yaxis, plot_bgcolor="white", height=600, width=850,)
@@ -359,24 +349,23 @@ class BandDosPlotsWidget(ipw.VBox):
 
     def _create_dos_only_plot(self):
         """Function to return the pdos plot widget."""
+        
         import plotly.graph_objects as go
         fig = go.Figure()
-        for trace in self.dos_data["dos"]:
-            my_fill = "tozeroy" if trace["label"] == "Total DOS" else None
-            dos_np = np.array(trace["x"])
-            fig.add_trace(
-                go.Scatter(
-                    x=dos_np - self.fermi_energy,
-                    y=trace["y"],
-                    fill=my_fill,
-                    name=trace["label"],
-                    line=dict(
-                        color=trace["borderColor"], shape="spline", smoothing=1.0
-                    ),
-                )
-            )
+        # Extract DOS data
+        self._add_dos_traces(fig, plot_type="dos_only")
+        # Add a vertical line at zero energy
         fig.add_vline(x=0, line=dict(color="#111111", width=1, dash="dot"))
-        fig.update_layout(xaxis=self.dos_xaxis, yaxis=self.dos_yaxis, plot_bgcolor="white", height=600, width=850,)
+
+        # Update the layout of the Figure
+        fig.update_layout(
+            xaxis=self.dos_xaxis,
+            yaxis=self.dos_yaxis,
+            plot_bgcolor="white",
+            height=600,
+            width=850,
+        )
+
         return go.FigureWidget(fig)
 
     def _create_combined_plot(self):
@@ -387,8 +376,8 @@ class BandDosPlotsWidget(ipw.VBox):
             rows=1, cols=2, shared_yaxes=True, column_widths=[0.7, 0.3], horizontal_spacing=0.02
         )
         paths = self.bands_data[0].get("paths")
-        self._add_band_traces(fig, paths)
-        self._add_dos_traces(fig)
+        self._add_band_traces(fig, paths, plot_type="combined")
+        self._add_dos_traces(fig, plot_type="combined")
         for i in self.band_labels[1]:
                 fig.add_vline(
                     x=i,
@@ -399,43 +388,60 @@ class BandDosPlotsWidget(ipw.VBox):
         self._customize_combined_layout(fig)
         return go.FigureWidget(fig)
 
-    def _add_band_traces(self, fig, paths):
-
+    def _add_band_traces(self, fig, paths, plot_type):
         import plotly.graph_objects as go
+        paths = self.bands_data[0].get("paths")
+        # Convert paths to a list of Scatter objects
+        scatter_objects = []
         for band in paths:
             for bands in band["values"]:
                 bands_np = np.array(bands)
-                fig.add_trace(
+                scatter_objects.append(
                     go.Scatter(
                         x=band["x"],
                         y=bands_np - self.fermi_energy,
                         mode="lines",
                         line=dict(color="#111111", shape="spline", smoothing=1.3),
                         showlegend=False,
-                    ),
-                    row=1,
-                    col=1,
+                    )
                 )
+        if plot_type == "bands_only":
+            fig.add_traces(scatter_objects)
+        else:
+            rows = [1] * len(scatter_objects)
+            cols = [1] * len(scatter_objects)
+            fig.add_traces(scatter_objects, rows=rows,cols=cols)
 
-    def _add_dos_traces(self, fig):
+    def _add_dos_traces(self, fig, plot_type):
 
         import plotly.graph_objects as go
-        for trace in self.dos_data["dos"]:
-            my_fill = "tozerox" if trace["label"] == "Total DOS" else None
+        # Extract DOS data
+        dos_data = self.dos_data["dos"]
+
+        # Pre-allocate memory for Scatter objects
+        num_traces = len(dos_data)
+        scatter_objects = [None] * num_traces
+
+        # Vectorize Scatter object creation
+        for i, trace in enumerate(dos_data):
             dos_np = np.array(trace["x"])
-            fig.add_trace(
-                go.Scatter(
-                    x=trace["y"],
-                    y=dos_np - self.fermi_energy,
-                    fill=my_fill,
-                    name=trace["label"],
-                    line=dict(
-                        color=trace["borderColor"], shape="spline", smoothing=1.3
-                    ),
-                ),
-                row=1,
-                col=2,
+            fill_prop = "tozerox" if plot_type == "combined" else "tozeroy"
+            my_fill = fill_prop if trace["label"] == "Total DOS" else None
+            x_data = trace["y"] if plot_type == "combined" else dos_np - self.fermi_energy
+            y_data = dos_np - self.fermi_energy if plot_type == "combined" else trace["y"]
+            scatter_objects[i] = go.Scatter(
+                x=x_data,
+                y=y_data,
+                fill=my_fill,
+                name=trace["label"],
+                line=dict(color=trace["borderColor"], shape="spline", smoothing=1.0),
             )
+        if plot_type == "dos_only":
+            fig.add_traces(scatter_objects)
+        else:
+            rows = [1] * len(scatter_objects)
+            cols = [2] * len(scatter_objects)
+            fig.add_traces(scatter_objects, rows=rows,cols=cols)
 
     def _customize_combined_layout(self, fig):
         self._customize_layout(fig, self.bands_xaxis, self.bands_yaxis)
