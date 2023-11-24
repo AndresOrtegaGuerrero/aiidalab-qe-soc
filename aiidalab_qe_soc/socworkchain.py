@@ -115,7 +115,7 @@ class SOCWorkChain(WorkChain):
 
         if structure.pbc != (True, True, True):
             soc_bands.pop("bands_kpoints_distance")
-            bands.update({"bands_kpoints": bands_overrides["bands"]["kpoints"]})
+            soc_bands.update({"bands_kpoints": bands_overrides["bands"]["kpoints"]})
 
         builder.bands = soc_bands
 
