@@ -14,18 +14,8 @@ class Result(ResultPanel):
     def _update_view(self):
 
         #Check if the workchain has the outputs
-        try:
-            pdos_node = self.node.outputs.soc.pdos
-        except AttributeError:
-            pdos_node = None  
 
-        try:
-            bands_node = self.node.outputs.soc.bands
-        except AttributeError:
-            bands_node = None  
-
-
-        bands_dos_widget = BandDosPlotsWidget(bands=bands_node, pdos=pdos_node)
+        bands_dos_widget = BandDosPlotsWidget(node=self.node.outputs.soc)
 
         self.children = [bands_dos_widget]
 
