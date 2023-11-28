@@ -145,13 +145,17 @@ class BandDosPlotsWidget(ipw.VBox):
         expanded_selection, syntax_ok = string_range_to_list(
             self.selected_atoms.value, shift=-1
         )
-        dos = get_pdos_data(
-            self.pdos,
-            group_tag=self.dos_atoms_group.value,
-            plot_tag=self.dos_plot_group.value,
-            selected_atoms=expanded_selection,
-        )
-        return dos
+        if syntax_ok:
+            dos = get_pdos_data(
+                self.pdos,
+                group_tag=self.dos_atoms_group.value,
+                plot_tag=self.dos_plot_group.value,
+                selected_atoms=expanded_selection,
+            )
+            return dos
+        else:
+            return None
+        
 
     def _get_fermi_energy(self):
         fermi_energy = self.dos_data["fermi_energy"] if self.dos_data else self.bands.band_parameters["fermi_energy"]
@@ -465,23 +469,23 @@ class BandDosPlotsWidget(ipw.VBox):
 
     def _update_plot(self, _=None):
         with self.bands_widget:
+            self.wrong_syntax.layout.visibility = "hidden"
             expanded_selection, syntax_ok = string_range_to_list(
                 self.selected_atoms.value, shift=-1
             )
-            self._handle_syntax_errors(syntax_ok)
-            self.dos_data = self._get_dos_data()
-            self.bandsplot_widget = self._bandsplot_widget()
-            self._clear_output_and_display(self.bandsplot_widget)
+            if not syntax_ok:
+                self.wrong_syntax.layout.visibility = "visible"
+                clear_output(wait=True)
+            else:                    
+                self.dos_data = self._get_dos_data()
+                self.bandsplot_widget = self._bandsplot_widget()
+                self._clear_output_and_display(self.bandsplot_widget)
 
     def _clear_output_and_display(self, widget=None):
         clear_output(wait=True)
         if widget:
             display(widget)
 
-    def _handle_syntax_errors(self, syntax_ok):
-        if not syntax_ok:
-            self.wrong_syntax.layout.visibility = "visible"
-            clear_output(wait=True)
 
         
 
@@ -569,13 +573,12 @@ def _projections_curated_options(
     spin_type="none",
     line_style="solid",
 ):
-    """Collects data from ProjectionData and parses it as a dos list for the bandsplot widget."""
-    
     _pdos = {}
     list_positions = []
 
-    # Setting
-    dict_html = {
+    # Constants for HTML tags
+    HTML_TAGS = {
+        "s": "s",
         "pz": "p<sub>z</sub>",
         "px": "p<sub>x</sub>",
         "py": "p<sub>y</sub>",
@@ -599,11 +602,28 @@ def _projections_curated_options(
         -2.5: "<sup>-5</sup>/<sub>2</sub>",
     }
 
+    # Constants for spin types
+    SPIN_LABELS = {"up": "(↑)", "down": "(↓)", "none": ""}
+
+    def get_key(atom_position, kind_name, orbital_name_plotly):
+        if group_tag == "atoms" and plot_tag == "total":
+            return r"{var}".format(var=atom_position)
+        elif group_tag == "kinds" and plot_tag == "total":
+            return r"{var1}".format(var1=kind_name)
+        elif group_tag == "atoms" and plot_tag == "orbital":
+            return r"{var1}<br>{var2}-{var3}".format(
+                var1=atom_position, var2=kind_name, var3=orbital_name_plotly
+            )
+        elif group_tag == "kinds" and plot_tag == "orbital":
+            return r"{var1}-{var2}".format(var1=kind_name, var2=orbital_name_plotly)
+        else:
+            return None
+
     for orbital, pdos, energy in projections.get_pdos():
         orbital_data = orbital.get_orbital_dict()
         kind_name = orbital_data["kind_name"]
         atom_position = [round(i, 2) for i in orbital_data["position"]]
-
+        
         if atom_position not in list_positions:
             list_positions.append(atom_position)
 
@@ -611,77 +631,45 @@ def _projections_curated_options(
             orbital_name = orbital.get_name_from_quantum_numbers(
                 orbital_data["angular_momentum"], orbital_data["magnetic_number"]
             ).lower()
-            orbital_name_plotly = dict_html.get(orbital_name, orbital_name)
+            orbital_name_plotly = HTML_TAGS.get(orbital_name, orbital_name)
         except AttributeError:
-            # Handling the exception
             orbital_name = "j {j} l {l} m_j{m_j}".format(
                 j=orbital_data["total_angular_momentum"],
                 l=orbital_data["angular_momentum"],
                 m_j=orbital_data["magnetic_number"],
             )
             orbital_name_plotly = "j={j} <i>l</i>={l} m<sub>j</sub>={m_j}".format(
-                j=dict_html.get(orbital_data["total_angular_momentum"], ''),
+                j=HTML_TAGS.get(orbital_data["total_angular_momentum"]),
                 l=orbital_data["angular_momentum"],
-                m_j=dict_html.get(orbital_data["magnetic_number"], ''),
+                m_j=HTML_TAGS.get(orbital_data["magnetic_number"]),
             )
 
         if not selected_atoms:
-            key = _get_key(group_tag, plot_tag, atom_position, kind_name, orbital_name_plotly)
+            key = get_key(atom_position, kind_name, orbital_name_plotly)
 
             if key:
-                _update_pdos_dict(_pdos, key, pdos, energy)
+                _pdos.setdefault(key, [energy, 0])[1] += pdos
+
         else:
             try:
                 index = list_positions.index(atom_position)
-
                 if index in selected_atoms:
-                    key = _get_key(group_tag, plot_tag, atom_position, kind_name, orbital_name_plotly)
+                    key = get_key(atom_position, kind_name, orbital_name_plotly)
 
                     if key:
-                        _update_pdos_dict(_pdos, key, pdos, energy)
+                        _pdos.setdefault(key, [energy, 0])[1] += pdos
+
             except ValueError:
                 pass
 
-    dos = _format_dos(_pdos, spin_type, cmap, line_style)
-
-    return dos
-
-
-def _get_key(group_tag, plot_tag, atom_position, kind_name, orbital_name_plotly):
-    """Generates the key based on group_tag and plot_tag."""
-    
-    key_formats = {
-        ("atoms", "total"): r"{var}",
-        ("kinds", "total"): r"{var1}",
-        ("atoms", "orbital"): r"{var1}-{var}<br>{var3}",
-        ("kinds", "orbital"): r"{var1}<br>{var3}",
-    }
-
-    key = key_formats.get((group_tag, plot_tag))
-    if key is not None:
-        return key.format(var=atom_position, var1=kind_name, var3=orbital_name_plotly)
-    else:
-        return None
-
-def _update_pdos_dict(_pdos, key, pdos, energy):
-    """Updates the _pdos dictionary with the given key, pdos, and energy."""
-    if key in _pdos:
-        _pdos[key][1] += pdos
-    else:
-        _pdos[key] = [energy, pdos]
-
-
-def _format_dos(_pdos, spin_type, cmap, line_style):
-    """Formats the dos list based on _pdos, spin_type, cmap, and line_style."""
     dos = []
-
     for label, (energy, pdos) in _pdos.items():
         if spin_type == "down":
-            # Invert y-axis
             pdos = -pdos
-            label = f"{label} (↓)"
-        elif spin_type == "up":
-            label = f"{label} (↑)"
+            label += SPIN_LABELS[spin_type]
+
+        if spin_type == "up":
+            label += SPIN_LABELS[spin_type]
 
         orbital_pdos = {
             "label": label,
