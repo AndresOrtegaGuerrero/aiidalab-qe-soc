@@ -202,7 +202,7 @@ class BandDosPlotsWidget(ipw.VBox):
         labels_values = [label[1] for label in my_clean_labels]
         return [labels, labels_values]
 
-
+    
     def _band_xaxis(self):
         """Function to return the xaxis for the bands plot."""
         import plotly.graph_objects as go
@@ -377,7 +377,7 @@ class BandDosPlotsWidget(ipw.VBox):
         import plotly.graph_objects as go
         from plotly.subplots import make_subplots
         fig = make_subplots(
-            rows=1, cols=2, shared_yaxes=True, column_widths=[0.7, 0.3], horizontal_spacing=0.02
+            rows=1, cols=2, shared_yaxes=True, column_widths=[0.7, 0.3], horizontal_spacing=0.015
         )
         paths = self.bands_data[0].get("paths")
         self._add_band_traces(fig, paths, plot_type="combined")
@@ -451,9 +451,9 @@ class BandDosPlotsWidget(ipw.VBox):
         self._customize_layout(fig, self.bands_xaxis, self.bands_yaxis)
         self._customize_layout(fig, self.dos_xaxis, self.dos_yaxis, col=2)
         fig.update_layout(
-            legend=dict(xanchor="left", x=1.04),
+            legend=dict(xanchor="left", x=1.06),
             height=600,
-            width=850,
+            width=900,
             plot_bgcolor="white",
         )
 
