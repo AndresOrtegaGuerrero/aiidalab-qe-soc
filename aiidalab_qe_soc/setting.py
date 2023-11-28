@@ -9,6 +9,7 @@ from aiida import orm
 from aiida_quantumespresso.calculations.functions.create_kpoints_from_distance import (
     create_kpoints_from_distance,
 )
+from IPython.display import clear_output, display
 
 class Setting(Panel):
     
@@ -49,10 +50,19 @@ class Setting(Panel):
             If your system has periodicity xy. Please select one of the five 2D Bravais lattices corresponding to your system
             </div>"""
         )
-        self.settings_help = ipw.HTML(
+        self.pseudos_help = ipw.HTML(
             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
-            Select if you want a Band structure , Projected density of states or both to be computed.
-            Spin Orbit Coupling calculations are conducted using the Full relativistic pseudo potentials from the PseudoDojo library.
+            Spin-Orbit Coupling calculations utilize Full Relativistic Pseudopotentials from the PseudoDojo library.
+            </div>"""
+        )
+        self.settings_help = ipw.HTML(
+            """<div style="line-height: 150%; padding: 0px 10px 5px;">
+            Choose the computation type:
+            <ul style="margin-top: 5px; margin-bottom: 5px; padding-left: 0; display: flex; flex-wrap: wrap;">
+                <li style="margin-right: 10px; list-style-type: none; display: inline-block;">&#8226; Band Structure.</li>
+                <li style="margin-right: 10px; list-style-type: none; display: inline-block;">&#8226; Projected Density of States.</li>
+                <li style="list-style-type: none; display: inline-block;">&#8226; Band Structure and Projected Density of States.</li>
+            </ul>
             </div>"""
         )
 
@@ -63,6 +73,9 @@ class Setting(Panel):
         )
 
         self.mesh_grid = ipw.HTML()
+
+        self.lattice_2d_out = ipw.Output()
+        self.lattice_2d_box = ipw.VBox([self.lattice_help, self.kpath_2d])
 
         self.soc_ecutwfc = ipw.BoundedFloatText(
             value=90.0,
@@ -95,10 +108,12 @@ class Setting(Panel):
 
         self.children=[
                 self.settings_title,
+                self.pseudos_help,
                 self.settings_help,
                 self.calc_options,
-                self.lattice_help,
-                self.kpath_2d,
+                self.lattice_2d_out,
+                #self.lattice_help,
+                #self.kpath_2d,
                 self.cutoffs_help,
                 ipw.HBox([self.soc_ecutwfc, self.soc_ecutrho,]),
                 ipw.HBox([self.nscf_kpoints_distance, self.mesh_grid,]),
@@ -114,6 +129,17 @@ class Setting(Panel):
     @tl.observe("input_structure")
     def _update_structure(self, _=None):
         self._display_mesh()
+
+    @tl.observe("input_structure")
+    def _update_settings(self, _=None):
+        self._display_lattice_box()
+
+    def _display_lattice_box(self):
+        with self.lattice_2d_out:
+            if self.input_structure.pbc == (True,True,False):
+                display(self.lattice_2d_box)
+            else:
+                clear_output(wait=True)
 
     def _display_mesh(self, _=None):
         if self.input_structure is None:
