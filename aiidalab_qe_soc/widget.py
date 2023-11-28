@@ -605,17 +605,19 @@ def _projections_curated_options(
     # Constants for spin types
     SPIN_LABELS = {"up": "(↑)", "down": "(↓)", "none": ""}
 
-    def get_key(atom_position, kind_name, orbital_name_plotly):
-        if group_tag == "atoms" and plot_tag == "total":
-            return r"{var}".format(var=atom_position)
-        elif group_tag == "kinds" and plot_tag == "total":
-            return r"{var1}".format(var1=kind_name)
-        elif group_tag == "atoms" and plot_tag == "orbital":
-            return r"{var1}<br>{var2}-{var3}".format(
-                var1=atom_position, var2=kind_name, var3=orbital_name_plotly
-            )
-        elif group_tag == "kinds" and plot_tag == "orbital":
-            return r"{var1}-{var2}".format(var1=kind_name, var2=orbital_name_plotly)
+    def get_key(group_tag, plot_tag, atom_position, kind_name, orbital_name_plotly):
+        """Generates the key based on group_tag and plot_tag."""
+
+        key_formats = {
+            ("atoms", "total"): r"{var1}-{var}",
+            ("kinds", "total"): r"{var1}",
+            ("atoms", "orbital"): r"{var1}-{var}<br>{var2}",
+            ("kinds", "orbital"): r"{var1}<br>{var2}",
+        }
+
+        key = key_formats.get((group_tag, plot_tag))
+        if key is not None:
+            return key.format(var=atom_position, var1=kind_name, var2=orbital_name_plotly)
         else:
             return None
 
@@ -645,7 +647,7 @@ def _projections_curated_options(
             )
 
         if not selected_atoms:
-            key = get_key(atom_position, kind_name, orbital_name_plotly)
+            key = get_key(group_tag, plot_tag,atom_position, kind_name, orbital_name_plotly)
 
             if key:
                 _pdos.setdefault(key, [energy, 0])[1] += pdos
@@ -654,7 +656,7 @@ def _projections_curated_options(
             try:
                 index = list_positions.index(atom_position)
                 if index in selected_atoms:
-                    key = get_key(atom_position, kind_name, orbital_name_plotly)
+                    key = get_key(group_tag, plot_tag, atom_position, kind_name, orbital_name_plotly)
 
                     if key:
                         _pdos.setdefault(key, [energy, 0])[1] += pdos
