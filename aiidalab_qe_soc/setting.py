@@ -112,8 +112,6 @@ class Setting(Panel):
                 self.settings_help,
                 self.calc_options,
                 self.lattice_2d_out,
-                #self.lattice_help,
-                #self.kpath_2d,
                 self.cutoffs_help,
                 ipw.HBox([self.soc_ecutwfc, self.soc_ecutrho,]),
                 ipw.HBox([self.nscf_kpoints_distance, self.mesh_grid,]),
@@ -136,10 +134,11 @@ class Setting(Panel):
 
     def _display_lattice_box(self):
         with self.lattice_2d_out:
-            if self.input_structure.pbc == (True,True,False):
-                display(self.lattice_2d_box)
-            else:
-                clear_output(wait=True)
+            if self.input_structure:
+                if self.input_structure.pbc == (True,True,False):
+                    display(self.lattice_2d_box)
+                else:
+                    clear_output(wait=True)
 
     def _display_mesh(self, _=None):
         if self.input_structure is None:
