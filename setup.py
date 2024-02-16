@@ -1,6 +1,7 @@
 import pathlib
+import subprocess
 from setuptools import setup, find_packages
-from setuptools.command.install import install
+
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
@@ -27,12 +28,9 @@ setup(
             "soc_app.soc = aiidalab_qe_soc.socworkchain:SOCWorkChain",
         ],
     },
-    install_requires=[
-    ],
+    install_requires=[],
     package_data={},
     python_requires=">=3.6",
 )
 
-# Run post_install.py after installation
-import subprocess
-subprocess.run(['python', 'pseudos_install.py'])
+subprocess.run(["python", "pseudos_install.py"])

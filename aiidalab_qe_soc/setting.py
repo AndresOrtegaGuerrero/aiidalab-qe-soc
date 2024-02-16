@@ -2,7 +2,6 @@
 """
 import ipywidgets as ipw
 import traitlets as tl
-from aiida.orm import StructureData
 from aiidalab_qe.common.panel import Panel
 from aiida_quantumespresso.workflows.pdos import PdosWorkChain
 from aiida import orm
@@ -11,8 +10,8 @@ from aiida_quantumespresso.calculations.functions.create_kpoints_from_distance i
 )
 from IPython.display import clear_output, display
 
+
 class Setting(Panel):
-    
     title = "SOC Settings"
     identifier = "soc"
 
@@ -106,22 +105,34 @@ class Setting(Panel):
 
         self.nscf_kpoints_distance.observe(self._display_mesh, "value")
 
-        self.children=[
-                self.settings_title,
-                self.pseudos_help,
-                self.settings_help,
-                self.calc_options,
-                self.lattice_2d_out,
-                self.cutoffs_help,
-                ipw.HBox([self.soc_ecutwfc, self.soc_ecutrho,]),
-                ipw.HBox([self.nscf_kpoints_distance, self.mesh_grid,]),
-            ]
+        self.children = [
+            self.settings_title,
+            self.pseudos_help,
+            self.settings_help,
+            self.calc_options,
+            self.lattice_2d_out,
+            self.cutoffs_help,
+            ipw.HBox(
+                [
+                    self.soc_ecutwfc,
+                    self.soc_ecutrho,
+                ]
+            ),
+            ipw.HBox(
+                [
+                    self.nscf_kpoints_distance,
+                    self.mesh_grid,
+                ]
+            ),
+        ]
         super().__init__(**kwargs)
 
     @tl.observe("protocol")
     def _protocol_changed(self, change):
         """Input protocol changed, update the widget values."""
-        self.nscf_kpoints_distance.value = PdosWorkChain.get_protocol_inputs(self.protocol)["nscf"]["kpoints_distance"]
+        self.nscf_kpoints_distance.value = PdosWorkChain.get_protocol_inputs(
+            self.protocol
+        )["nscf"]["kpoints_distance"]
         self._display_mesh()
 
     @tl.observe("input_structure")
@@ -135,7 +146,7 @@ class Setting(Panel):
     def _display_lattice_box(self):
         with self.lattice_2d_out:
             if self.input_structure:
-                if self.input_structure.pbc == (True,True,False):
+                if self.input_structure.pbc == (True, True, False):
                     display(self.lattice_2d_box)
                 else:
                     clear_output(wait=True)
@@ -150,7 +161,6 @@ class Setting(Panel):
         )
         self.mesh_grid.value = "Mesh " + str(mesh.get_kpoints_mesh()[0])
 
-    
     def get_panel_value(self):
         """Return a dictionary with the input parameters for the plugin."""
         return {
@@ -176,6 +186,3 @@ class Setting(Panel):
         self.soc_ecutwfc.value = 90.0
         self.soc_ecutrho.value = 360.0
         self.nscf_kpoints_distance.value = 0.1
-
-
-    
