@@ -1,7 +1,7 @@
 from subprocess import run
 
-functionals = ['PBE', 'PBEsol']
-protocols = ['standard', 'stringent']
+functionals = ["PBE", "PBEsol"]
+protocols = ["standard", "stringent"]
 
 for functional in functionals:
     for protocol in protocols:

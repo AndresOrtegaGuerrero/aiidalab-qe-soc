@@ -1,10 +1,11 @@
 from aiida.plugins import WorkflowFactory
 from aiida_quantumespresso.common.types import ElectronicType, SpinType
 from aiidalab_qe.plugins.bands.workchain import generate_kpath_1d, generate_kpath_2d
+
 SOCWorkChain = WorkflowFactory("soc_app.soc")
 
-def get_builder(codes,structure, parameters):
 
+def get_builder(codes, structure, parameters):
     SOC_PROPERTIES = {
         "bands": ["bands"],
         "pdos": ["pdos"],
@@ -12,6 +13,7 @@ def get_builder(codes,structure, parameters):
     }
 
     from copy import deepcopy
+
     protocol = parameters["workchain"].pop("protocol", "moderate")
     pseudos = parameters["advanced"].get("pseudo_family")
     pseudo_info = pseudos.split("/")
@@ -20,10 +22,10 @@ def get_builder(codes,structure, parameters):
     dos_code = codes.pop("soc_dos")
     projwfc_code = codes.pop("soc_projwfc")
 
-    #scf overrides
+    # scf overrides
     scf_overrides = deepcopy(parameters["advanced"])
 
-    #bands overrides
+    # bands overrides
     bands_overrides = deepcopy(parameters["advanced"])
     bands_overrides.pop("kpoints_distance", None)
     bands_overrides["pw"]["parameters"]["SYSTEM"].pop("smearing", None)
@@ -65,11 +67,9 @@ def get_builder(codes,structure, parameters):
         electronic_type=ElectronicType(parameters["workchain"]["electronic_type"]),
         spin_type=SpinType(parameters["workchain"]["spin_type"]),
         initial_magnetic_moments=parameters["advanced"]["initial_magnetic_moments"],
-        functional = functional, 
+        functional=functional,
         clean_workdir=False,
-        )
-
-
+    )
 
     return builder
 

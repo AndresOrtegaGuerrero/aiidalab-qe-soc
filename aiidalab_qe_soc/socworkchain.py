@@ -1,12 +1,12 @@
 from aiida.plugins import WorkflowFactory
-from aiida.engine import ToContext, WorkChain, calcfunction, if_
+from aiida.engine import ToContext, WorkChain, if_
 from aiida_quantumespresso.utils.mapping import prepare_process_inputs
-from aiida_quantumespresso.common.types import ElectronicType, SpinType
 from aiida import orm
 from aiida.common import AttributeDict
 
 PdosWorkChain = WorkflowFactory("quantumespresso.pdos")
 PwBandsWorkChain = WorkflowFactory("quantumespresso.pw.bands")
+
 
 class SOCWorkChain(WorkChain):
     "WorkChain to compute vibrational property of a crystal."
@@ -45,17 +45,14 @@ class SOCWorkChain(WorkChain):
         )
         spec.expose_outputs(
             PwBandsWorkChain, namespace='bands',
-            namespace_options={'required': False, 'help':'Outputs of the `PwBandsWorkChain`.'},
+            namespace_options={'required': False, 'help': 'Outputs of the `PwBandsWorkChain`.'},
         )
         spec.expose_outputs(
             PdosWorkChain, namespace='pdos',
-            namespace_options={'required': False, 'help':'Outputs of the `PdosWorkChain`.'},
+            namespace_options={'required': False, 'help': 'Outputs of the `PdosWorkChain`.'},
         )
-        spec.exit_code(401, 'ERROR_SUB_PROCESS_FAILED_BANDS',
-                       message='the PwBandsWorkChain sub process failed')
-        spec.exit_code(402, 'ERROR_SUB_PROCESS_FAILED_PDOS',
-                          message='the PdosWorkChain sub process failed')
-
+        spec.exit_code(401, 'ERROR_SUB_PROCESS_FAILED_BANDS', message='the PwBandsWorkChain sub process failed')
+        spec.exit_code(402, 'ERROR_SUB_PROCESS_FAILED_PDOS', message='the PdosWorkChain sub process failed')
 
     @classmethod
     def get_builder_from_protocol(
@@ -69,33 +66,40 @@ class SOCWorkChain(WorkChain):
         clean_workdir,
         functional="PBE",
         overrides=None,
-        **kwargs):
+        **kwargs,
+    ):
         """Return a builder prepopulated with inputs selected according to the protocol."""
 
         overrides = overrides or {}
         builder = cls.get_builder()
 
-        #Use only Fully Relativistic pseudos
+        # Use only Fully Relativistic pseudos
         if functional == "PBE":
             family_fr_pseudo = orm.load_group("PseudoDojo/0.4/PBE/FR/stringent/upf")
         else:
             family_fr_pseudo = orm.load_group("PseudoDojo/0.4/PBEsol/FR/stringent/upf")
 
-        #Set spin_orbit coupling
+        # Set spin_orbit coupling
         for key in ["bands", "pdos"]:
             for calc in ["scf", "nscf", "bands"]:
                 if calc in overrides[key]:
-                    overrides[key][calc]["pw"]["pseudos"] = family_fr_pseudo.get_pseudos(structure=structure)
-                    overrides[key][calc]["pw"]["parameters"]["SYSTEM"]["lspinorb"] = True
-                    overrides[key][calc]["pw"]["parameters"]["SYSTEM"]["noncolin"] = True
-                    overrides[key][calc]["pw"]["metadata"] =  {
-                            "options": {"max_wallclock_seconds": 82800}
-                        }
+                    overrides[key][calc]["pw"][
+                        "pseudos"
+                    ] = family_fr_pseudo.get_pseudos(structure=structure)
+                    overrides[key][calc]["pw"]["parameters"]["SYSTEM"][
+                        "lspinorb"
+                    ] = True
+                    overrides[key][calc]["pw"]["parameters"]["SYSTEM"][
+                        "noncolin"
+                    ] = True
+                    overrides[key][calc]["pw"]["metadata"] = {
+                        "options": {"max_wallclock_seconds": 82800}
+                    }
 
         # Set the structure
         builder.structure = structure
 
-        bands_overrides = overrides.pop('bands', {})
+        bands_overrides = overrides.pop("bands", {})
 
         # Bands workchain settings
         soc_bands = PwBandsWorkChain.get_builder_from_protocol(
@@ -103,13 +107,13 @@ class SOCWorkChain(WorkChain):
             code=pw_code,
             protocol=protocol,
             overrides=bands_overrides,
-            **kwargs
+            **kwargs,
         )
 
         # pop the inputs that are excluded from the exposed inputs of the bands workchain
-        soc_bands.pop('clean_workdir', None)
-        soc_bands.pop('structure', None)
-        soc_bands.pop('relax', None)
+        soc_bands.pop("clean_workdir", None)
+        soc_bands.pop("structure", None)
+        soc_bands.pop("relax", None)
         soc_bands.scf["pw"]["parameters"]["SYSTEM"].pop("nspin", None)
         soc_bands.bands["pw"]["parameters"]["SYSTEM"].pop("nspin", None)
 
@@ -122,22 +126,22 @@ class SOCWorkChain(WorkChain):
         # Pdos workchain settings
 
         if dos_code is not None and projwfc_code is not None:
-            pdos_overrides = overrides.pop('pdos', {})
+            pdos_overrides = overrides.pop("pdos", {})
             soc_pdos = PdosWorkChain.get_builder_from_protocol(
                 structure=structure,
-                pw_code = pw_code,
+                pw_code=pw_code,
                 dos_code=dos_code,
                 projwfc_code=projwfc_code,
                 protocol=protocol,
                 overrides=pdos_overrides,
-                **kwargs
+                **kwargs,
             )
-            soc_pdos.pop('clean_workdir', None)
-            soc_pdos.pop('structure', None)
+            soc_pdos.pop("clean_workdir", None)
+            soc_pdos.pop("structure", None)
             soc_pdos.scf["pw"]["parameters"]["SYSTEM"].pop("nspin", None)
             soc_pdos.nscf["pw"]["parameters"]["SYSTEM"].pop("nspin", None)
             builder.pdos = soc_pdos
-        
+
         # Set the properties
         builder.properties = orm.List(list=properties)
 
@@ -151,21 +155,21 @@ class SOCWorkChain(WorkChain):
         self.ctx.current_structure = self.inputs.structure
         self.ctx.properties = self.inputs.properties
 
-        #logic to decide if bands should be run
+        # logic to decide if bands should be run
         self.ctx.run_bands = "bands" in self.ctx.properties
         self.ctx.run_pdos = "pdos" in self.ctx.properties
-    
+
     def should_run_bands(self):
         """Return whether a bands calculation should be run."""
         return self.ctx.run_bands
-    
+
     def run_bands(self):
         """Run the bands calculation."""
-        inputs = AttributeDict(self.exposed_inputs(PwBandsWorkChain, namespace="bands")) 
+        inputs = AttributeDict(self.exposed_inputs(PwBandsWorkChain, namespace="bands"))
         inputs.metadata.call_link_label = "bands"
         inputs.structure = self.ctx.current_structure
         running = self.submit(PwBandsWorkChain, **inputs)
-        self.report(f'launching PwBandsWorkChain<{running.pk}>')
+        self.report(f"launching PwBandsWorkChain<{running.pk}>")
 
         return ToContext(workchain_bands=running)
 
@@ -174,7 +178,9 @@ class SOCWorkChain(WorkChain):
         workchain = self.ctx.workchain_bands
 
         if not workchain.is_finished_ok:
-            self.report(f'bands workchain failed with exit status {workchain.exit_status}')
+            self.report(
+                f"bands workchain failed with exit status {workchain.exit_status}"
+            )
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_BANDS
 
         scf = (
@@ -191,21 +197,21 @@ class SOCWorkChain(WorkChain):
     def should_run_pdos(self):
         """Return whether a pdos calculation should be run."""
         return self.ctx.run_pdos
-    
+
     def run_pdos(self):
         """Run the pdos calculation."""
-        inputs = AttributeDict(self.exposed_inputs(PdosWorkChain, namespace="pdos")) 
+        inputs = AttributeDict(self.exposed_inputs(PdosWorkChain, namespace="pdos"))
         inputs.metadata.call_link_label = "pdos"
         inputs.structure = self.ctx.current_structure
         inputs.nscf.pw.parameters = inputs.nscf.pw.parameters.get_dict()
 
-        if hasattr(self.ctx, 'scf_parent_folder'):
+        if hasattr(self.ctx, "scf_parent_folder"):
             inputs.pop("scf")
             inputs.nscf.pw.parent_folder = self.ctx.scf_parent_folder
-        
+
         inputs = prepare_process_inputs(PdosWorkChain, inputs)
         running = self.submit(PdosWorkChain, **inputs)
-        self.report(f'launching PdosWorkChain<{running.pk}>')
+        self.report(f"launching PdosWorkChain<{running.pk}>")
 
         return ToContext(workchain_pdos=running)
 
@@ -214,13 +220,21 @@ class SOCWorkChain(WorkChain):
         workchain = self.ctx.workchain_pdos
 
         if not workchain.is_finished_ok:
-            self.report(f'pdos workchain failed with exit status {workchain.exit_status}')
+            self.report(
+                f"pdos workchain failed with exit status {workchain.exit_status}"
+            )
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_PDOS
 
     def results(self):
-
         if self.ctx.run_bands:
-            self.out_many(self.exposed_outputs(self.ctx.workchain_bands, PwBandsWorkChain, namespace="bands"))
+            self.out_many(
+                self.exposed_outputs(
+                    self.ctx.workchain_bands, PwBandsWorkChain, namespace="bands"
+                )
+            )
         if self.ctx.run_pdos:
-            self.out_many(self.exposed_outputs(self.ctx.workchain_pdos, PdosWorkChain, namespace="pdos"))
-
+            self.out_many(
+                self.exposed_outputs(
+                    self.ctx.workchain_pdos, PdosWorkChain, namespace="pdos"
+                )
+            )
