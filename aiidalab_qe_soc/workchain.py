@@ -45,6 +45,14 @@ def get_builder(codes, structure, parameters):
     nscf_overrides = deepcopy(parameters["advanced"])
     nscf_overrides["kpoints_distance"] = parameters["soc"]["nscf_kpoints_distance"]
 
+    dos_overrides = {"parameters": {"DOS": {}}}
+    projwfc_overrides = {"parameters": {"PROJWFC": {}}}
+
+    dos_overrides["parameters"]["DOS"] = {"degauss": parameters["soc"]["pdos_smearing"]}
+    projwfc_overrides["parameters"]["PROJWFC"] = {
+        "degauss": parameters["soc"]["pdos_smearing"]
+    }
+
     overrides = {
         "bands": {
             "scf": scf_overrides,
@@ -53,6 +61,8 @@ def get_builder(codes, structure, parameters):
         "pdos": {
             "scf": scf_overrides,
             "nscf": nscf_overrides,
+            "dos": dos_overrides,
+            "projwfc": projwfc_overrides,
         },
     }
 
