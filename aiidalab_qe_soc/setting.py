@@ -105,6 +105,16 @@ class Setting(Panel):
 
         self.nscf_kpoints_distance.observe(self._display_mesh, "value")
 
+        # nscf kpoints setting widget
+        self.pdos_smearing = ipw.BoundedFloatText(
+            min=0.001,
+            step=0.005,
+            value=0.01,
+            description="Pdos Smearing width (Ry):",
+            disabled=False,
+            style={"description_width": "initial"},
+        )
+
         self.children = [
             self.settings_title,
             self.pseudos_help,
@@ -124,6 +134,7 @@ class Setting(Panel):
                     self.mesh_grid,
                 ]
             ),
+            self.pdos_smearing,
         ]
         super().__init__(**kwargs)
 
@@ -169,6 +180,7 @@ class Setting(Panel):
             "soc_ecutrho": self.soc_ecutrho.value,
             "kpath_2d": self.kpath_2d.value,
             "nscf_kpoints_distance": self.nscf_kpoints_distance.value,
+            "pdos_smearing": self.pdos_smearing.value,
         }
 
     def set_panel_value(self, input_dict):
@@ -178,6 +190,7 @@ class Setting(Panel):
         self.soc_ecutwfc.value = input_dict.get("soc_ecutwfc", 90.0)
         self.soc_ecutrho.value = input_dict.get("soc_ecutrho", 360.0)
         self.nscf_kpoints_distance.value = input_dict.get("nscf_kpoints_distance", 0.1)
+        self.pdos_smearing.value = input_dict.get("pdos_smearing", 0.01)
 
     def reset(self):
         """Reset the panel to its default values."""
@@ -186,3 +199,4 @@ class Setting(Panel):
         self.soc_ecutwfc.value = 90.0
         self.soc_ecutrho.value = 360.0
         self.nscf_kpoints_distance.value = 0.1
+        self.pdos_smearing.value = 0.01
