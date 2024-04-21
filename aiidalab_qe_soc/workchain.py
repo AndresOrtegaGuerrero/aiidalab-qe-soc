@@ -24,12 +24,22 @@ def get_builder(codes, structure, parameters):
 
     # scf overrides
     scf_overrides = deepcopy(parameters["advanced"])
+    scf_overrides["pw"]["parameters"]["SYSTEM"]["ecutwfc"] = parameters["soc"][
+        "soc_ecutwfc"
+    ]
+    scf_overrides["pw"]["parameters"]["SYSTEM"]["ecutrho"] = parameters["soc"][
+        "soc_ecutrho"
+    ]
 
     # bands overrides
     bands_overrides = deepcopy(parameters["advanced"])
     bands_overrides.pop("kpoints_distance", None)
-    bands_overrides["pw"]["parameters"]["SYSTEM"].pop("smearing", None)
-    bands_overrides["pw"]["parameters"]["SYSTEM"].pop("degauss", None)
+    bands_overrides["pw"]["parameters"]["SYSTEM"]["ecutwfc"] = parameters["soc"][
+        "soc_ecutwfc"
+    ]
+    bands_overrides["pw"]["parameters"]["SYSTEM"]["ecutrho"] = parameters["soc"][
+        "soc_ecutrho"
+    ]
 
     if structure.pbc != (True, True, True):
         kpoints_distance = parameters["advanced"]["kpoints_distance"]
@@ -44,6 +54,12 @@ def get_builder(codes, structure, parameters):
 
     nscf_overrides = deepcopy(parameters["advanced"])
     nscf_overrides["kpoints_distance"] = parameters["soc"]["nscf_kpoints_distance"]
+    nscf_overrides["pw"]["parameters"]["SYSTEM"]["ecutwfc"] = parameters["soc"][
+        "soc_ecutwfc"
+    ]
+    nscf_overrides["pw"]["parameters"]["SYSTEM"]["ecutrho"] = parameters["soc"][
+        "soc_ecutrho"
+    ]
 
     dos_overrides = {"parameters": {"DOS": {}}}
     projwfc_overrides = {"parameters": {"PROJWFC": {}}}
