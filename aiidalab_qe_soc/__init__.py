@@ -2,19 +2,19 @@ from .setting import Setting
 from .workchain import workchain_and_builder
 from .result import Result
 from aiidalab_qe.common.panel import OutlinePanel
-from aiidalab_widgets_base import ComputationalResourcesWidget
+from aiidalab_qe.common.widgets import QEAppComputationalResourcesWidget
 
 
 class SOCOutline(OutlinePanel):
     title = "Bands/Pdos w SOC"
 
 
-dos_code = ComputationalResourcesWidget(
+dos_code = QEAppComputationalResourcesWidget(
     description="dos.x soc",
     default_calc_job_plugin="quantumespresso.dos",
 )
 
-projwfc_code = ComputationalResourcesWidget(
+projwfc_code = QEAppComputationalResourcesWidget(
     description="projwfc.x soc",
     default_calc_job_plugin="quantumespresso.projwfc",
 )
