@@ -1,8 +1,52 @@
 from aiida.plugins import WorkflowFactory
+from aiida import orm
 from aiida_quantumespresso.common.types import ElectronicType, SpinType
 from aiidalab_qe.plugins.bands.workchain import generate_kpath_1d, generate_kpath_2d
 
 SOCWorkChain = WorkflowFactory("soc_app.soc")
+
+
+def set_resources(builder_attribute, code_details):
+    """
+    Set the resources and parallelization for a given attribute of the builder.
+
+    Parameters:
+        builder_attribute: The attribute of the builder to update (e.g., builder.scf.pw).
+        code_details: A dictionary containing the nodes, ntasks_per_node, and cpus_per_task.
+    """
+    builder_attribute.metadata.options.resources = {
+        "num_machines": code_details["nodes"],
+        "num_mpiprocs_per_machine": code_details["ntasks_per_node"],
+        "num_cores_per_mpiproc": code_details["cpus_per_task"],
+    }
+    if "parallelization" in code_details:
+        builder_attribute.parallelization = orm.Dict(
+            dict=code_details["parallelization"]
+        )
+
+
+def update_resources(builder, codes):
+    """
+    Update resources and parallelization settings for various components of the builder.
+
+    Parameters:
+        builder: The main builder object to be updated.
+        codes: A dictionary containing the configuration codes for different components.
+    """
+    # Update resources for 'scf' and 'nscf' stages using the 'pw' code details
+    if "pw" in codes:
+        set_resources(builder.pdos.scf.pw, codes["pw"])
+        set_resources(builder.pdos.nscf.pw, codes["pw"])
+        set_resources(builder.bands.scf.pw, codes["pw"])
+        set_resources(builder.bands.bands.pw, codes["pw"])
+
+    # Update resources for 'dos' stage using the 'dos' code details
+    if "dos" in codes:
+        set_resources(builder.pdos.dos, codes["dos"])
+
+    # Update resources for 'projwfc' stage using the 'projwfc' code details
+    if "projwfc" in codes:
+        set_resources(builder.pdos.projwfc, codes["projwfc"])
 
 
 def get_builder(codes, structure, parameters):
@@ -18,9 +62,9 @@ def get_builder(codes, structure, parameters):
     pseudos = parameters["advanced"].get("pseudo_family")
     pseudo_info = pseudos.split("/")
     functional = pseudo_info[2]
-    pw_code = codes.pop("pw")
-    dos_code = codes.pop("soc_dos")
-    projwfc_code = codes.pop("soc_projwfc")
+    pw_code = codes.pop("pw")["code"]
+    dos_code = codes.pop("soc_dos")["code"]
+    projwfc_code = codes.pop("soc_projwfc")["code"]
 
     # scf overrides
     scf_overrides = deepcopy(parameters["advanced"])
@@ -96,7 +140,7 @@ def get_builder(codes, structure, parameters):
         functional=functional,
         clean_workdir=False,
     )
-
+    update_resources(builder, codes)
     return builder
 
 
