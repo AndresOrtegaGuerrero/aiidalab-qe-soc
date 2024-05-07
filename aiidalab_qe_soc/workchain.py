@@ -41,11 +41,11 @@ def update_resources(builder, codes):
         set_resources(builder.bands.bands.pw, codes["pw"])
 
     # Update resources for 'dos' stage using the 'dos' code details
-    if "dos" in codes:
+    if "soc_dos" in codes:
         set_resources(builder.pdos.dos, codes["dos"])
 
     # Update resources for 'projwfc' stage using the 'projwfc' code details
-    if "projwfc" in codes:
+    if "soc_projwfc" in codes:
         set_resources(builder.pdos.projwfc, codes["projwfc"])
 
 
@@ -62,9 +62,9 @@ def get_builder(codes, structure, parameters):
     pseudos = parameters["advanced"].get("pseudo_family")
     pseudo_info = pseudos.split("/")
     functional = pseudo_info[2]
-    pw_code = codes.pop("pw")["code"]
-    dos_code = codes.pop("soc_dos")["code"]
-    projwfc_code = codes.pop("soc_projwfc")["code"]
+    pw_code = codes.get("pw")["code"]
+    dos_code = codes.get("soc_dos")["code"]
+    projwfc_code = codes.get("soc_projwfc")["code"]
 
     # scf overrides
     scf_overrides = deepcopy(parameters["advanced"])
